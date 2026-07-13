@@ -13,7 +13,7 @@ jobs:
       - name: Install dependencies
         run: pip install customtkinter pillow pygame plyer pyinstaller
       - name: Build EXE
-        run: pyinstaller --noconsole --onefile --name "jam_gui".py
+        run: pyinstaller --noconsole --onefile --name "jam_gui" jam_gui.py
       - name: Upload EXE
         uses: actions/upload-artifact@v4
         with:
