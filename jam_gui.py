@@ -148,21 +148,38 @@ class JamGUI(ctk.CTk):
         self.btn_toggle = ctk.CTkButton(self.ghost_frame, text="Start Chime", command=self.toggle_jam, height=40, width=160, font=("Century Gothic", 14, "bold"), fg_color="#7C9A82", text_color="#FFFFFF", corner_radius=20)
         self.btn_toggle.pack(pady=25)
 
-    def pilih_folder(self): 
-        f = ctk.filedialog.askdirectory(); 
-        if f: self.audio_folder = f; self.lbl_folder_path.configure(text=f".../{os.path.basename(f)}")
-    def toggle_jam(self):
-        self.is_running = not self.is_running
-        d = self.lang_data[self.current_lang]
-        self.lbl_status.configure(text=d["status_on"] if self.is_running else d["status_off"])
-        self.btn_toggle.configure(text=d["btn_start"] if not self.is_running else d["btn_stop"])
-        if self.is_running: threading.Thread(target=self.clock_loop, daemon=True).start()
+    def cek_waktu_aktif(self):
+        try:
+            # Ambil waktu sekarang
+            now = datetime.now()
+            current_total = now.hour * 60 + now.minute
+            
+            # Ambil setting dari user
+            start_total = int(self.jam_mulai.get()) * 60 + int(self.menit_mulai.get())
+            end_total = int(self.jam_selesai.get()) * 60 + int(self.menit_selesai.get())
+            
+            # Logika perbandingan
+            if start_total < end_total:
+                is_active = start_total <= current_total < end_total
+            else: # Kasus melintasi tengah malam (misal 22:00 ke 04:00)
+                is_active = current_total >= start_total or current_total < end_total
+            
+            return is_active
+        except ValueError:
+            return True # Kalau input ngaco, anggap aktif saja
+
     def clock_loop(self):
         while self.is_running:
             now = datetime.now()
+            # Cek detik ke-0 (pas pergantian menit)
             if now.minute in self.CHIMES and now.second == 0:
-                self.play_chime(now.minute)
-                time.sleep(1)
+                # --- PERBAIKAN DI SINI ---
+                if self.cek_waktu_aktif():
+                    self.play_chime(now.minute)
+                else:
+                    self.catat_log(f"🌙 Mode DND aktif. Lonceng {now.minute} ditahan.")
+                # -------------------------
+                time.sleep(1) # Biar nggak double play
             time.sleep(0.5)
     def play_chime(self, minute):
         path = os.path.join(self.audio_folder, self.CHIMES.get(minute))
